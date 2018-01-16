@@ -1,0 +1,5 @@
+<context id="networkcues" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://repast.org/scenario/context">
+    <projection type="network" id="communication network"/>
+    <projection type="network" id="kinship network"/>
+    <projection type="network" id="trade network"/>
+</context>

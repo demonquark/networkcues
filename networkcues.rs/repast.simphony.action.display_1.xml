@@ -1,0 +1,71 @@
+<repast.simphony.visualization.engine.CartesianDisplayDescriptor simphonyVersion="2.5.0">
+  <name>Trade Network</name>
+  <type>2D</type>
+  <styles>
+    <entry>
+      <string>networkcues.Agent</string>
+      <string>repast.simphony.visualizationOGL2D.DefaultStyleOGL2D</string>
+    </entry>
+  </styles>
+  <editedStyles>
+    <entry>
+      <string>networkcues.Agent</string>
+      <null/>
+    </entry>
+  </editedStyles>
+  <netStyles>
+    <entry>
+      <string>trade network</string>
+      <string>repast.simphony.visualization.editedStyle.EditedEdgeStyle2D</string>
+    </entry>
+  </netStyles>
+  <editedNetStyles>
+    <entry>
+      <string>trade network</string>
+      <string>tradenetwork.style_1.xml</string>
+    </entry>
+  </editedNetStyles>
+  <frequency>ON_NEW</frequency>
+  <schedParams>
+    <start>1.0</start>
+    <interval>1.0</interval>
+    <priority>-Infinity</priority>
+    <pType>LAST</pType>
+    <duration>-1.0</duration>
+    <frequency>REPEAT</frequency>
+    <hashCode>-1353212605</hashCode>
+  </schedParams>
+  <layoutClassName>repast.simphony.visualization.visualization2D.layout.FRLayout2D</layoutClassName>
+  <layoutProjection>trade network</layoutProjection>
+  <layoutInterval>0</layoutInterval>
+  <layerOrder>
+    <entry>
+      <string>networkcues.Agent</string>
+      <int>0</int>
+    </entry>
+  </layerOrder>
+  <projections>
+    <repast.simphony.scenario.data.ProjectionData>
+      <id>trade network</id>
+      <attributes/>
+      <type>network</type>
+    </repast.simphony.scenario.data.ProjectionData>
+  </projections>
+  <projectionDescriptors>
+    <entry>
+      <string>trade network</string>
+      <repast.simphony.visualization.engine.DefaultProjectionDescriptor>
+        <proj reference="../../../../projections/repast.simphony.scenario.data.ProjectionData"/>
+        <props/>
+      </repast.simphony.visualization.engine.DefaultProjectionDescriptor>
+    </entry>
+  </projectionDescriptors>
+  <props/>
+  <backgroundColor>
+    <red>255</red>
+    <green>255</green>
+    <blue>255</blue>
+    <alpha>255</alpha>
+  </backgroundColor>
+  <valueLayers/>
+</repast.simphony.visualization.engine.CartesianDisplayDescriptor>
