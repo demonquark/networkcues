@@ -6,10 +6,12 @@ public class Profile {
 
 	public static enum Strategy { COOPERATE, DEFECT, TITFORTAT, NONE }; 
 	public static final double TWO_THIRDS = 0.67; 
+	
 	private boolean kinship;
 	private boolean network;
 	private boolean indirect;
 	private boolean group;
+	private boolean considerDistanceWhenPartnering;
 	private double certainty;
 	private int groupID;
 	private Strategy strategy;
@@ -21,6 +23,7 @@ public class Profile {
 		this.network = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
 		this.indirect = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
 		this.group = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
+		this.considerDistanceWhenPartnering = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
 		this.certainty = Profile.TWO_THIRDS;
 		this.groupID = RandomHelper.nextIntFromTo(0, NetworkCuesBuilder.COUNT_GROUPS);
 		this.strategy = this.chooseARandomStrategy();
@@ -64,8 +67,12 @@ public class Profile {
 		return this.talkability;
 	}
 
-	public boolean shouldIRate() {
-		
+	public boolean shouldConsiderDistanceWhenPartnering() {
+		return this.considerDistanceWhenPartnering;
+	}
+
+	public boolean shouldIRate() {		
 		return RandomHelper.nextDouble() > this.talkability;
 	}
+	
 }

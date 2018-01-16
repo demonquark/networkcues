@@ -1,7 +1,5 @@
 package networkcues;
 
-import java.util.HashMap;
-
 import networkcues.TradeEdge.TradeResult;
 import repast.simphony.context.Context;
 import repast.simphony.engine.schedule.ScheduledMethod;
@@ -16,44 +14,41 @@ public class Agent {
 	
 	private final static int LEN_BUYING = Good.LEN_TYPE / 2 + 1;
 	
-	protected int id;
+	public final int id;
+	public final Profile profile;
+	public final NdPoint location;
+
 	protected int neighborhoodSize;
 	protected int numOfRatingsReceived;
 	protected double averageRating;
+	protected Good selling;
+	protected Good [] buying;
 	protected TradeEdge.TradeResult lastTradeResult;
-	public Profile profile;
-	public Good selling;
-	public Good [] buying;
 
-	public NdPoint location;
+	private AgentController supervisor;
 	private Network <Object> commNetwork;
 	private Network <Object> tradeNetwork;
-	private HashMap<Integer, Integer> groups;
-	private HashMap<Integer, Double> groupAffinity;
-
 	
-	public Agent(int id, NdPoint location, Network <Object> commNetwork, Network <Object> tradeNetwork, 
-			HashMap<Integer, Integer> groups, HashMap<Integer, Double> groupAffinity) {
+	public Agent(int id, NdPoint location, Network <Object> commNetwork, Network <Object> tradeNetwork, AgentController supervisor) {
+		
+		// fixed values (these will never change)
 		this.id = id;
-		this.neighborhoodSize = 0;
+		this.profile = new Profile();
 		this.location = location;
-		this.commNetwork = commNetwork;
-		this.tradeNetwork = tradeNetwork;
-		this.groups = groups;
-		this.groupAffinity = groupAffinity;
+
+		// default initialization values
+		this.neighborhoodSize = 0;
 		this.numOfRatingsReceived = 0;
 		this.averageRating = 0;
 		this.lastTradeResult = TradeResult.CC;
-		
-		this.profile = new Profile();
+
+		// References to the the context objects
+		this.supervisor = supervisor;
+		this.commNetwork = commNetwork;
+		this.tradeNetwork = tradeNetwork;
 		
 		// Add the agent to a group
-		if (this.groups.containsKey(this.profile.getGroupID())) {
-			this.groups.put(this.profile.getGroupID(), this.groups.get(this.profile.getGroupID()) + 1);
-		} else {
-			this.groups.put(this.profile.getGroupID(), 1);
-			this.groupAffinity.put(this.profile.getGroupID(), RandomHelper.nextDouble());
-		}
+		supervisor.addAgentToGroup(this.profile.getGroupID());
 	}
 	
 	@ScheduledMethod(start = 1, interval = 2)
@@ -119,7 +114,7 @@ public class Agent {
 					continue;
 				}
 				
-				// Make sure that other can buy this' selling good
+				// Make sure that other agent can buy this agent's selling good
 				boolean wantsWhatImSelling = false;
 				for (int i = 0; i < other.buying.length; i++) {
 					if(this.selling.type == other.buying[i].type) {
@@ -128,7 +123,7 @@ public class Agent {
 					}
 				}
 				
-				// Make sure that this can buy other's selling good
+				// Make sure that this agent can buy other agent's selling good
 				boolean hasWhatImBuying = false;
 				for (int i = 0; i < this.buying.length; i++) {
 					if(other.selling.type == this.buying[i].type) {
@@ -142,7 +137,11 @@ public class Agent {
 					RepastEdge<Object> edge = commNetwork.getEdge(this, other);
 					if (edge != null && edge.getWeight() < distanceToPartner) {
 						distanceToPartner = edge.getWeight();
-						bestPartner = other;						
+						bestPartner = other;			
+						
+						//Immediately exit for agents that don't care about the partner's distance
+						if(!this.profile.shouldConsiderDistanceWhenPartnering())
+							break;
 					}
 				}
 			}
@@ -154,33 +153,13 @@ public class Agent {
 		}
 	}
 
-//	@ScheduledMethod(start = 3, interval = 3)
-//	public void makeTrade() {
-//		Iterable<RepastEdge<Object>> collection = this.tradeNetwork.getEdges(this);
-//		for (Object current : collection) {
-//		// Get the current agent
-//			@SuppressWarnings("unchecked")
-//			TradeEdge<Object> edge = (TradeEdge<Object>) current;
-//			if (!edge.isTradeComplete()) {
-//				edge.makeTrade();
-//				
-//				Object other = edge.getSource() == this ? edge.getTarget() : edge.getSource();
-//				RepastEdge<Object> commEdge = this.commNetwork.getEdge(this, other);
-//				
-//				if (commEdge != null && CommunicationEdge.class.isInstance(commEdge)) {
-//					((CommunicationEdge<Object>) commEdge).addTrade();
-//				}
-//			}
-//		}
-//	}
-
 	public void completeTrade(Agent agent2, TradeEdge.TradeResult tradeResult) {
 		
 		// Record that the trade happened
 		RepastEdge<Object> edge = this.commNetwork.getEdge(this, agent2);
 		if (edge != null && CommunicationEdge.class.isInstance(edge)) {
 			((CommunicationEdge<Object>) edge).addTrade();
-			((CommunicationEdge<Object>) edge).setLastTradeResult(tradeResult);;
+			((CommunicationEdge<Object>) edge).setLastTradeResult(this, tradeResult);;
 		}
 
 		// Update the last trade result
@@ -205,6 +184,11 @@ public class Agent {
 			agent2.rate(singleRating);
 		}
 		
+	}
+
+	public void rate(double singleRating) {
+		this.averageRating = ((this.averageRating * this.numOfRatingsReceived ) + singleRating) / (this.numOfRatingsReceived + 1);
+		this.numOfRatingsReceived++;
 	}
 	
 	public double getKinshipCoefficientTo(Agent agent2) {
@@ -233,11 +217,6 @@ public class Agent {
 		
 		return normalizedDistance;
 	}
-
-	public void rate(double singleRating) {
-		this.averageRating = ((this.averageRating * this.numOfRatingsReceived ) + singleRating) / (this.numOfRatingsReceived + 1);
-		this.numOfRatingsReceived++;
-	}
 	
 	public double getReputationOf(Agent agent2) {
 		
@@ -254,7 +233,7 @@ public class Agent {
 	public double getGroupAffinityWith(Agent agent2) {
 		
 		double affinity = agent2.profile.getGroupID() == this.profile.getGroupID() ? 1 : -1;
-		affinity = affinity * this.groupAffinity.get(this.profile.getGroupID());
+		affinity = affinity * this.supervisor.groupAffinities.get(this.profile.getGroupID());
 
 		return affinity;
 	}
@@ -265,11 +244,41 @@ public class Agent {
 		RepastEdge<Object> edge = this.commNetwork.getEdge(this, agent2);
 	
 		if (edge != null && CommunicationEdge.class.isInstance(edge) ) {
-			tradeResult = ((CommunicationEdge<Object>) edge).getLastTradeResult();
+			tradeResult = ((CommunicationEdge<Object>) edge).getLastTradeResult(this);
 		}
 		
 		return tradeResult;
 		
 	}
-
+	
+	public double getDistanceTo(Agent agent2) {
+		
+		NdPoint point1 = this.location;
+		NdPoint point2 = agent2.location;
+		
+		// Make sure we're working in the same space here
+		if (point1.dimensionCount() != point2.dimensionCount()) return Double.NaN;
+		
+		double sum = 0;
+		for (int i = 0, n = point1.dimensionCount(); i < n; i++) {
+			
+			// Get the difference in this dimension
+			double absDiff = Math.abs(point1.getCoord(i) - point2.getCoord(i));
+			
+			// The world is continuous, so make sure the difference is within our dimension length
+			while (absDiff > NetworkCuesBuilder.LEN_SPACE){
+				absDiff -= NetworkCuesBuilder.LEN_SPACE;
+			}
+			
+			// The world is continuous, so check the wrap around distance 
+			if (absDiff > NetworkCuesBuilder.LEN_SPACE / 2){
+				absDiff = NetworkCuesBuilder.LEN_SPACE - absDiff;
+			}
+			
+			sum += absDiff * absDiff;
+		}
+		
+		// return the Euclidian distance (i.e. the square root of the sum)
+		return Math.sqrt(sum);
+	}
 }

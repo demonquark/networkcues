@@ -34,8 +34,15 @@ public class CommunicationEdge<T> extends RepastEdge<T> {
 		this.sameGroup = sameGroup;
 	}
 
-	public void setLastTradeResult(TradeEdge.TradeResult tradeResult) {
-		this.lastTradeResult = tradeResult;
+	public void setLastTradeResult(Agent sourceAgent, TradeEdge.TradeResult tradeResult) {
+		switch(tradeResult) {
+			case CD:
+				this.lastTradeResult = (sourceAgent == this.source) ? tradeResult : TradeEdge.TradeResult.DC;
+			case DC:
+				this.lastTradeResult = (sourceAgent == this.source) ? tradeResult : TradeEdge.TradeResult.CD;
+			default:
+				this.lastTradeResult = tradeResult;
+		}
 	}
 
 	public void addTrade() {
@@ -58,8 +65,15 @@ public class CommunicationEdge<T> extends RepastEdge<T> {
 		return normalizedDistance;
 	}
 	
-	public TradeEdge.TradeResult getLastTradeResult() {
-		return this.lastTradeResult;
+	public TradeEdge.TradeResult getLastTradeResult(Agent sourceAgent) {
+		switch(this.lastTradeResult) {
+		case CD:
+			return (sourceAgent == this.source) ? this.lastTradeResult : TradeEdge.TradeResult.DC;
+		case DC:
+			return (sourceAgent == this.source) ? this.lastTradeResult : TradeEdge.TradeResult.CD;
+		default:
+			return this.lastTradeResult;
+		}
 	}
 	
 	public boolean areNeigbhors() {

@@ -29,9 +29,14 @@ public class NetworkCuesBuilder implements ContextBuilder<Object> {
 	@Override
 	public Context<Object> build(Context<Object> context) {
 		context.setId("networkcues");
-				
-		// Define a communication projection
+		
+		// Create a controller
+		AgentController agentController = new AgentController();
+
+		// Create a network factory
 		NetworkFactory networkFactory = NetworkFactoryFinder.createNetworkFactory(null);
+		
+		// Define a communication projection
 		Network <Object> commNetwork = networkFactory.createNetwork("communication network", context, false, new CommunicationEdgeCreator<Object>());
 
 		// Define a trade network projection
@@ -39,24 +44,17 @@ public class NetworkCuesBuilder implements ContextBuilder<Object> {
 
 		// Define a kinship network projection
 		Network <Object> kinNetwork = networkFactory.createNetwork("kinship network", context, false);
-
-		HashMap<Integer, Integer> groups = new HashMap<Integer, Integer> ();
-		HashMap<Integer, Double> groupAffinities = new HashMap<Integer, Double> ();
 		
 		// Create a set of agents
 		for (int i = 0; i < COUNT_AGENT; i++) {
 			NdPoint location = new NdPoint(RandomHelper.nextDouble() * LEN_SPACE, RandomHelper.nextDouble() * LEN_SPACE);
-			Agent x = new Agent(i, location, commNetwork, tradeNetwork, groups, groupAffinities);
+			Agent x = new Agent(i, location, commNetwork, tradeNetwork, agentController);
 			context.add(x);
 		}
 
 		// Populate the communication network
 		this.buildCommunicationNetwork(context, commNetwork, kinNetwork);
 		
-		// Create a controller
-		AgentController b = new AgentController();
-		context.add(b);
-
 		return context;
 	}
 
@@ -93,7 +91,7 @@ public class NetworkCuesBuilder implements ContextBuilder<Object> {
 					edge.setKinship(paths.getPathLength(currentAgent, otherAgent));
 					
 					// Determine the neighborhood distance and neighborhood size
-					double distance = this.getDistance(currentAgent.location, otherAgent.location);
+					double distance = currentAgent.getDistanceTo(otherAgent);
 					if (distance < NetworkCuesBuilder.LEN_NEIGHBORHOOD) {
 						edge.setNormalizedDistance(1 - (distance / NetworkCuesBuilder.LEN_NEIGHBORHOOD));
 						currentAgent.neighborhoodSize++;
@@ -120,9 +118,6 @@ public class NetworkCuesBuilder implements ContextBuilder<Object> {
 						counts2.put(possibleKey, 1);
 					}
 				}
-				
-				// Calculate the neighborhood Size
-				
 			}
 		}
 		
@@ -172,7 +167,6 @@ public class NetworkCuesBuilder implements ContextBuilder<Object> {
 		// Create a kinship network
 		Network <Object> kinshipNetwork = kinNetwork;
 
-		//		UndirectedJungNetwork<Object> kinshipNetwork = new UndirectedJungNetwork<Object>("kinship network");
 		ArrayList<SimpleEntry<Integer, Integer>> possibleKin = new ArrayList<SimpleEntry<Integer, Integer>> ();
 		ArrayList<Integer> maxConnections = new ArrayList<Integer> ();
 		
@@ -256,38 +250,7 @@ public class NetworkCuesBuilder implements ContextBuilder<Object> {
 			// Add this agent to the possible kin for the next agent
 			possibleKin.add(kin);
 		}
-		
-		
 		return kinNetwork;
-	}
-	
-	private double getDistance(NdPoint point1, NdPoint point2) {
-		
-		// Make sure we're working in the same space here
-		if (point1.dimensionCount() != point2.dimensionCount()) return Double.NaN;
-		
-		double sum = 0;
-		for (int i = 0, n = point1.dimensionCount(); i < n; i++) {
-			
-			// Get the difference in this dimension
-			double absDiff = Math.abs(point1.getCoord(i) - point2.getCoord(i));
-			
-			// The world is continuous, so make sure the difference is within our dimension length
-			while (absDiff > NetworkCuesBuilder.LEN_SPACE){
-				absDiff -= NetworkCuesBuilder.LEN_SPACE;
-			}
-			
-			// The world is continuous, so check the wrap around distance 
-			if (absDiff > NetworkCuesBuilder.LEN_SPACE / 2){
-				absDiff = NetworkCuesBuilder.LEN_SPACE - absDiff;
-			}
-			
-			sum += absDiff * absDiff;
-		}
-		
-		// return the Euclidian distance (i.e. the square root of the sum)
-		return Math.sqrt(sum);
-		
 	}
 
 }

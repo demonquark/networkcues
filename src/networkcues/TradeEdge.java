@@ -1,7 +1,5 @@
 package networkcues;
 
-import java.util.ArrayList;
-
 import repast.simphony.random.RandomHelper;
 import repast.simphony.space.graph.RepastEdge;
 
@@ -9,12 +7,7 @@ public class TradeEdge<T> extends RepastEdge<T> {
 
 	public static enum TradeResult { CC, CD, DC, DD };
 	public static final double STRATEGY_MULTIPLIER = 1.5;
-
-	public double ratingReliability;
-	public ArrayList<Double> ratings;
 	private double weight;
-	private double sourcePayOffMatrix [];
-	private double targetPayOffMatrix [];
 	
 	public TradeEdge(T source, T target, boolean directed, double weight) {
 		this.source = source;
@@ -22,20 +15,14 @@ public class TradeEdge<T> extends RepastEdge<T> {
 		this.directed = directed;
 		this.weight = weight;
 		
-		// Calculate the pay off matrix
+		// Make the trade
 		if (Agent.class.isInstance(source) && Agent.class.isInstance(target)) { 
-			this.sourcePayOffMatrix = calculatePayOffMatrix((Agent)source, (Agent)target);
-			this.targetPayOffMatrix = calculatePayOffMatrix((Agent)target, (Agent)source);			
+			this.makeTrade(calculatePayOffMatrix((Agent)source, (Agent)target), calculatePayOffMatrix((Agent)target, (Agent)source));
 		} else {
-			this.sourcePayOffMatrix = new double [4];
-			this.targetPayOffMatrix = new double [4];			
+			this.makeTrade(new double [4], new double [4]);
 		}
 		
-		// Make the trade
-		this.makeTrade();
-
 	}
-
 	
 	private double [] calculatePayOffMatrix(Agent agent1, Agent agent2) {
 		
@@ -51,11 +38,11 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			double normalizedDistance = agent1.getNormalizedDistanceTo(agent2);
 			
 			// Calculate H
-			double h = k > 2 ? ((b_c) * k + 2 * c) / ((k + 1) * (k - 2)) : 1;
+			double h = k > 2 ? ((b_c) * k + 2 * c) / ((k + 1) * (k - 2)) : b_c;
 			
 			// Update the cost and benefit
 			b += h * normalizedDistance;
-			c += h * normalizedDistance;			
+			c += h * normalizedDistance;
 		}
 		
 		// Kinship selection
@@ -97,31 +84,6 @@ public class TradeEdge<T> extends RepastEdge<T> {
 		payoffMatrix[3] = 0;
 		
 		return payoffMatrix;
-		
-
-		// Kinship selection
-		// this.kinship = (this is r) GET FROM kinship network 
-		
-		// Indirect reciprocity
-		// this.rating = (this is q) GET FROM partner's ratings
-		// this.ratingReliability = ratings.size() / NetworkCuesBuilder.COUNT_AGENT;
-		
-		// Network reciprocity (neighborhood)
-		// this.neighborhoodsize =  (this is k) GET FROM communication network
-		// this.neighbornormalizeddistance = GET FROM communication network (i.e. k)
-		// this.neighborlyness = (this is H) GET FROM formula
-		
-		// Group selection
-		// this.membersofsamegroup = True/False GET FROM partner's groupID
-		// this.groupsize = GET FROM context (?)
-		// this.numberofGroups = GET FROM context (?)
-		
-		// 1. Determine from profile which mechanisms the agent wants to use
-		// 2. Calculate the pay off matrix using the chosen mechanisms
-		// 3. Subtract cost from Defection and Add cost to Cooperation 
-		// 4. Determine from profile which strategy the agent prefers
-		// 5. Adjust the pay off matrix with strategy preference
-		// 6. Make decision based on Greedy mentality (i.e. choice with highest average return)
 	}
 
 	public String[] chooseAction(Agent a, double [] payoffMatrix, TradeEdge.TradeResult lastTradeResult) {
@@ -155,7 +117,7 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			}
 			
 			// Determine whether or not to cooperate based on Greedy mentality (i.e. choose highest expected return)
-			boolean a_cooperate = (a_c2 > a_d2 ? true : a_c2 == a_d2 ? RandomHelper.nextDouble() >= 0.5 : false);
+			boolean a_cooperate = (a_c2 > a_d2 ? true : a_c2 == a_d2 ? RandomHelper.nextDouble() > 0.55 : false);
 
 			// Log output
 			String a_profile = (a.profile.useNetworkReciprocity() ? "1": "0");
@@ -164,35 +126,53 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			a_profile += (a.profile.useIndirectReciprocity() ? "1": "0"); 
 			a_profile += a.profile.getStrategy() == Profile.Strategy.COOPERATE ? "C" : a.profile.getStrategy() == Profile.Strategy.DEFECT ? "D" : a.profile.getStrategy() == Profile.Strategy.TITFORTAT ? "T" : "N";
 			
-			String matrix = "[" + String.format("%.2f", payoffMatrix[0]) + "|" + String.format("%.2f", payoffMatrix[1]) + "|" + String.format("%.2f", payoffMatrix[2]) + "|" + String.format("%.2f", payoffMatrix[3]) + "]";
+			String matrix = "[" + String.format("%3.2f", payoffMatrix[0]) + "|" + String.format("%.2f", payoffMatrix[1]) + "|" + String.format("%.2f", payoffMatrix[2]) + "|" + String.format("%.2f", payoffMatrix[3]) + "]";
 			String expected1 =  String.format("%.2f", a_c1) + "|" + String.format("%.2f", a_d1);
 			String expected2 =  String.format("%.2f", a_c2) + "|" + String.format("%.2f", a_d2);
 			
-			logOutput[0] = String.format("% 3d", a.id) + " " + a_profile;
-			logOutput[1] = matrix;
-			logOutput[2] = expected1;
-			logOutput[3] = expected2;
-			logOutput[4] = a_cooperate ? "C" : "D";
+			logOutput[0] = String.format("%03d", a.id) + "(" + String.format("%03d", a.profile.getGroupID()) + ") " + a_profile;
+			logOutput[1] = a_cooperate ? "C" : "D";
+			logOutput[2] = matrix;
+			logOutput[3] = expected1;
+			logOutput[4] = expected2;
 		}
 		
 		return logOutput;
 	} 
 	
-	public void makeTrade() {
+	public void makeTrade(double [] sourcePayOffMatrix, double [] targetPayOffMatrix) {
 		// Calculate the pay off matrix
 		if (Agent.class.isInstance(this.source) && Agent.class.isInstance(this.target)) { 
 
 			Agent a = (Agent)this.source;
 			Agent b = (Agent)this.target;
 			
-			String [] logOutput1 = this.chooseAction(a, this.sourcePayOffMatrix, a.getLastTradeResultWithAgent(b));
-			String [] logOutput2 = this.chooseAction(b, this.targetPayOffMatrix, b.getLastTradeResultWithAgent(a));
+			// Determine the node choices
+			String [] logOutput1 = this.chooseAction(a, sourcePayOffMatrix, a.getLastTradeResultWithAgent(b));
+			String [] logOutput2 = this.chooseAction(b, targetPayOffMatrix, b.getLastTradeResultWithAgent(a));
+						
+			// Complete the trade
+			TradeEdge.TradeResult a_tradeResult;
+			TradeEdge.TradeResult b_tradeResult;
+			if("C".equals(logOutput1[1])) {
+				a_tradeResult = "C".equals(logOutput2[1]) ? TradeEdge.TradeResult.CC : TradeEdge.TradeResult.CD;
+			} else {
+				a_tradeResult = "C".equals(logOutput2[1]) ? TradeEdge.TradeResult.DC : TradeEdge.TradeResult.DD;
+			}
+			if("C".equals(logOutput2[1])) {
+				b_tradeResult = "C".equals(logOutput1[1]) ? TradeEdge.TradeResult.CC : TradeEdge.TradeResult.CD;
+			} else {
+				b_tradeResult = "C".equals(logOutput1[1]) ? TradeEdge.TradeResult.DC : TradeEdge.TradeResult.DD;
+			}
+			a.completeTrade(b, a_tradeResult);
+			b.completeTrade(a, b_tradeResult);
 			
-			System.out.println(logOutput1[0] + "<->" + logOutput2[0] + logOutput1[1] + "~" + logOutput2[1] + " => " + logOutput1[2] + "~" + logOutput2[2]);
-			System.out.println(" => " + logOutput1[3] + "~" + logOutput2[3] + " => " + logOutput1[4] + "~" + logOutput2[4]);
+			// Log the node choice
+			System.out.print(logOutput1[0] + " <-> " + logOutput2[0] + " " + logOutput1[1] + logOutput2[1] + " => " + logOutput1[2] + "<>" + logOutput2[2]);
+			System.out.println(" ~ " + logOutput1[3] + "<>" + logOutput2[3] + " ~ " + logOutput1[4] + "<>" + logOutput2[4]);
 			
 		} else {
-			System.out.println("At least one of the nodes is not an agent.");
+			System.out.println("One or more of the nodes is not an agent.");
 		}
 	}
 	
