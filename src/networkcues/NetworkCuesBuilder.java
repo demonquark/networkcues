@@ -31,7 +31,7 @@ public class NetworkCuesBuilder implements ContextBuilder<Object> {
 		context.setId("networkcues");
 		
 		// Create a controller
-		AgentController agentController = new AgentController();
+		AgentController agentController = new AgentController(null);
 
 		// Create a network factory
 		NetworkFactory networkFactory = NetworkFactoryFinder.createNetworkFactory(null);

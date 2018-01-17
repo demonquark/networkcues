@@ -6,28 +6,51 @@ public class Profile {
 
 	public static enum Strategy { COOPERATE, DEFECT, TITFORTAT, NONE }; 
 	public static final double TWO_THIRDS = 0.67; 
-	
+
+	// Strategy and characteristics that influence payOffMatrix
 	private boolean kinship;
 	private boolean network;
 	private boolean indirect;
 	private boolean group;
-	private boolean considerDistanceWhenPartnering;
-	private double certainty;
-	private int groupID;
 	private Strategy strategy;
+	
+	// Characteristics that don't influence payOffMatrix
+	private int groupID;
 	private double talkability;
+	private double certainty;
+	
+	// Public profile features
+	protected double profileFeature1;
+	protected double profileFeature2;
+	protected double profileFeature3;
+	protected double profileFeature4;
+	protected double profileFeature5;
+	protected double profileFeature6;
+	protected double profileFeature7;
+	
+	
 	
 	public Profile() {
-		
+
+		// Create a profile
 		this.kinship = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
 		this.network = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
 		this.indirect = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
 		this.group = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
-		this.considerDistanceWhenPartnering = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
-		this.certainty = Profile.TWO_THIRDS;
-		this.groupID = RandomHelper.nextIntFromTo(0, NetworkCuesBuilder.COUNT_GROUPS);
 		this.strategy = this.chooseARandomStrategy();
+
+		this.groupID = RandomHelper.nextIntFromTo(0, NetworkCuesBuilder.COUNT_GROUPS);
+		this.certainty = Profile.TWO_THIRDS;
 		this.talkability = RandomHelper.nextDouble();
+		
+		this.profileFeature1 = RandomHelper.nextDoubleFromTo(this.kinship ? 0 : 0.8, this.kinship ? 0.2 : 1);
+		this.profileFeature2 = RandomHelper.nextDoubleFromTo(this.network ? 0 : 0.8, this.network ? 0.2 : 1);
+		this.profileFeature3 = RandomHelper.nextDoubleFromTo(this.indirect ? 0 : 0.8, this.indirect ? 0.2 : 1);
+		this.profileFeature4 = RandomHelper.nextDoubleFromTo(this.group ? 0 : 0.8, this.group ? 0.2 : 1);
+		this.profileFeature5 = RandomHelper.nextDoubleFromTo(this.strategy != Strategy.COOPERATE  ? 0 : 0.8, this.strategy != Strategy.COOPERATE ? 0.2 : 1);
+		this.profileFeature6 = RandomHelper.nextDoubleFromTo(this.strategy != Strategy.DEFECT ? 0 : 0.8, this.strategy != Strategy.DEFECT ? 0.2 : 1);
+		this.profileFeature7 = RandomHelper.nextDoubleFromTo(this.strategy != Strategy.TITFORTAT ? 0 : 0.8, this.strategy != Strategy.TITFORTAT ? 0.2 : 1);
+		
 	}	
 	
 	private Strategy chooseARandomStrategy() {
@@ -68,7 +91,7 @@ public class Profile {
 	}
 
 	public boolean shouldConsiderDistanceWhenPartnering() {
-		return this.considerDistanceWhenPartnering;
+		return RandomHelper.nextDouble() > Profile.TWO_THIRDS;
 	}
 
 	public boolean shouldIRate() {		

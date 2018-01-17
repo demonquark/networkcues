@@ -168,8 +168,8 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			b.completeTrade(a, b_tradeResult);
 			
 			// Log the node choice
-			System.out.print(logOutput1[0] + " <-> " + logOutput2[0] + " " + logOutput1[1] + logOutput2[1] + " => " + logOutput1[2] + "<>" + logOutput2[2]);
-			System.out.println(" ~ " + logOutput1[3] + "<>" + logOutput2[3] + " ~ " + logOutput1[4] + "<>" + logOutput2[4]);
+//			System.out.print(logOutput1[0] + " <-> " + logOutput2[0] + " " + logOutput1[1] + logOutput2[1] + " => " + logOutput1[2] + "<>" + logOutput2[2]);
+//			System.out.println(" ~ " + logOutput1[3] + "<>" + logOutput2[3] + " ~ " + logOutput1[4] + "<>" + logOutput2[4]);
 			
 		} else {
 			System.out.println("One or more of the nodes is not an agent.");

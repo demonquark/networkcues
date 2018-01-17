@@ -184,6 +184,44 @@ public class Agent {
 			agent2.rate(singleRating);
 		}
 		
+		// Prep the trade data for training
+		double [][] inputArray = new double[1][20];
+		double [][] desiredOutputArray = new double[1][1];
+		
+		// profile features
+		inputArray[0][0] = this.profile.profileFeature1;
+		inputArray[0][1] = this.profile.profileFeature2;
+		inputArray[0][2] = this.profile.profileFeature3;
+		inputArray[0][3] = this.profile.profileFeature4;
+		inputArray[0][4] = this.profile.profileFeature5;
+		inputArray[0][5] = this.profile.profileFeature6;
+		inputArray[0][6] = this.profile.profileFeature7;
+		
+		// partner profile features
+		inputArray[0][7] = agent2.profile.profileFeature1;
+		inputArray[0][8] = agent2.profile.profileFeature2;
+		inputArray[0][9] = agent2.profile.profileFeature3;
+		inputArray[0][10] = agent2.profile.profileFeature4;
+		inputArray[0][11] = agent2.profile.profileFeature5;
+		inputArray[0][12] = agent2.profile.profileFeature6;
+		inputArray[0][13] = agent2.profile.profileFeature7;
+		
+		// signals sent during the trade
+		inputArray[0][14] = 0;
+		inputArray[0][15] = 0;
+
+		// Applied boosts
+		inputArray[0][16] = 0;
+		inputArray[0][17] = 0;
+		inputArray[0][18] = 0;
+		inputArray[0][19] = 0;
+		
+		// 1 is cooperated and 0 is defected
+		desiredOutputArray[0][0] = tradeResult == TradeEdge.TradeResult.CC || tradeResult == TradeEdge.TradeResult.CD ? 1 : 0;
+		
+		// Use the trade data to train the AgentController
+		this.supervisor.train(inputArray, desiredOutputArray);
+		
 	}
 
 	public void rate(double singleRating) {
@@ -281,4 +319,5 @@ public class Agent {
 		// return the Euclidian distance (i.e. the square root of the sum)
 		return Math.sqrt(sum);
 	}
+	
 }
