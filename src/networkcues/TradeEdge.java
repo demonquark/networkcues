@@ -8,12 +8,14 @@ public class TradeEdge<T> extends RepastEdge<T> {
 	public static enum TradeResult { CC, CD, DC, DD };
 	public static final double STRATEGY_MULTIPLIER = 1.5;
 	private double weight;
+	private double [] boosts;
 	
 	public TradeEdge(T source, T target, boolean directed, double weight) {
 		this.source = source;
 		this.target = target;
 		this.directed = directed;
 		this.weight = weight;
+		this.boosts = new double [4];
 		
 		// Make the trade
 		if (Agent.class.isInstance(source) && Agent.class.isInstance(target)) { 

@@ -156,8 +156,10 @@ public class Agent {
 	public void completeTrade(Agent agent2, TradeEdge.TradeResult tradeResult) {
 		
 		// Record that the trade happened
+		TradeEdge.TradeResult previousTradeResult = this.lastTradeResult;
 		RepastEdge<Object> edge = this.commNetwork.getEdge(this, agent2);
 		if (edge != null && CommunicationEdge.class.isInstance(edge)) {
+			previousTradeResult = ((CommunicationEdge<Object>) edge).getLastTradeResult(this);
 			((CommunicationEdge<Object>) edge).addTrade();
 			((CommunicationEdge<Object>) edge).setLastTradeResult(this, tradeResult);;
 		}
@@ -207,8 +209,8 @@ public class Agent {
 		inputArray[0][13] = agent2.profile.profileFeature7;
 		
 		// signals sent during the trade
-		inputArray[0][14] = 0;
-		inputArray[0][15] = 0;
+		inputArray[0][14] = this.profile.getGroupID() == agent2.profile.getGroupID() ? 1 : 0;
+		inputArray[0][15] = previousTradeResult == TradeEdge.TradeResult.CC || previousTradeResult == TradeEdge.TradeResult.DC ? 1 : 0;
 
 		// Applied boosts
 		inputArray[0][16] = 0;
@@ -220,7 +222,9 @@ public class Agent {
 		desiredOutputArray[0][0] = tradeResult == TradeEdge.TradeResult.CC || tradeResult == TradeEdge.TradeResult.CD ? 1 : 0;
 		
 		// Use the trade data to train the AgentController
-		this.supervisor.train(inputArray, desiredOutputArray);
+//		this.supervisor.train(inputArray, desiredOutputArray);
+//		this.supervisor.interrogate(inputArray, desiredOutputArray);
+		this.supervisor.act(inputArray, desiredOutputArray);
 		
 	}
 

@@ -6,15 +6,20 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.HashMap;
 
+import org.joone.engine.DirectSynapse;
 import org.joone.engine.FullSynapse;
+import org.joone.engine.Layer;
 import org.joone.engine.LinearLayer;
 import org.joone.engine.Monitor;
 import org.joone.engine.NeuralNetEvent;
 import org.joone.engine.NeuralNetListener;
+import org.joone.engine.Pattern;
 import org.joone.engine.SigmoidLayer;
 import org.joone.engine.learning.TeachingSynapse;
 import org.joone.io.MemoryInputSynapse;
+import org.joone.io.MemoryOutputSynapse;
 import org.joone.net.NeuralNet;
+import org.joone.net.NeuralNetLoader;
 
 import repast.simphony.random.RandomHelper;
 
@@ -26,13 +31,19 @@ public class AgentController implements NeuralNetListener {
 	private MemoryInputSynapse desiredOutputSynapse;
 	protected HashMap<Integer, Integer> groups;
 	protected HashMap<Integer, Double> groupAffinities;
-	private int dontOverDoTheLogging;
+	private int dontOverDoTheTraining1;
+	private int dontOverDoTheLogging1;
+	private int dontOverDoTheLogging2;
+	private double correctnessValue;
 
 	public AgentController(String fileName) {
 		groups = new HashMap<Integer, Integer> ();
 		groupAffinities = new HashMap<Integer, Double> ();
 
-		this.dontOverDoTheLogging = 0;
+		this.dontOverDoTheTraining1 = 0;
+		this.dontOverDoTheLogging1 = 0;
+		this.dontOverDoTheLogging2 = 0;
+		this.correctnessValue = 0;
 
 		// initialize the neural network
 		this.initNeuralNet(fileName);
@@ -93,6 +104,17 @@ public class AgentController implements NeuralNetListener {
         
 	}
 
+    public void act(double[][] inputArray, double[][] desiredOutputArray) {
+    	
+    	this.dontOverDoTheTraining1++;
+    	
+    	if (this.dontOverDoTheTraining1 < 20000) {
+    		this.train(inputArray, desiredOutputArray);
+    	}else if (this.dontOverDoTheTraining1 > 30000) {
+    		this.interrogate(inputArray, desiredOutputArray);
+    	}
+    	
+    }
     public void train(double[][] inputArray, double[][] desiredOutputArray) {
         
         // set the inputs
@@ -116,6 +138,43 @@ public class AgentController implements NeuralNetListener {
         // Run the network in single-thread, synchronized mode
         nnet.getMonitor().setSingleThreadMode(true);
         nnet.go(true);
+    }
+    
+    public void interrogate (double[][] inputArray, double[][] desiredOutputArray) {
+    	
+    		this.dontOverDoTheLogging2++;
+    		
+    		// Attach a DirectSynapse to the input layer
+    		Layer input = nnet.getInputLayer(); 
+    		input.removeAllInputs();
+    		DirectSynapse memInp = new DirectSynapse(); 
+    		input.addInputSynapse(memInp);
+
+    		// Attach a DirectSynapse to the output layer
+    		Layer output = nnet.getOutputLayer(); 
+    		output.removeAllOutputs();
+    		DirectSynapse memOut = new DirectSynapse();  
+    		output.addOutputSynapse(memOut);
+    		
+    		// Interrogate the input array
+    		Pattern iPattern = new Pattern(inputArray[0]);
+    		iPattern.setCount(1);
+
+    		// Interrogate the net
+    		nnet.go(); 
+    		memInp.fwdPut(iPattern);
+    		Pattern pattern = memOut.fwdGet();
+    		if (this.dontOverDoTheLogging2 % 20 == 0) {
+    			System.out.println( (this.dontOverDoTheLogging2 / 20) + ". " + String.format("%.2f" , desiredOutputArray[0][0]) + "|" + String.format("%.2f", pattern.getArray()[0]) );    			
+    		}
+    		nnet.stop();
+    }
+    
+    public double [] getBoosts() {
+    	
+    		double[] boosts = new double [4];
+    		
+    		return boosts;
     }
 
 	public void addAgentToGroup(int groupID) {
@@ -181,20 +240,20 @@ public class AgentController implements NeuralNetListener {
 	@Override
 	public void netStarted(NeuralNetEvent arg0) {
         Monitor mon = (Monitor) arg0.getSource();
-        if (this.dontOverDoTheLogging % 20 == 0) {
+        if (this.dontOverDoTheLogging1 % 200 == 0 && mon.isLearning()) {
             System.out.print("Network started for ");
             if (mon.isLearning())
                 System.out.println("training.");
             else
                 System.out.println("interrogation.");		
         }
-        this.dontOverDoTheLogging++;
+        this.dontOverDoTheLogging1++;
 	}
 
 	@Override
 	public void netStopped(NeuralNetEvent arg0) {
         Monitor mon = (Monitor) arg0.getSource();
-        if ((this.dontOverDoTheLogging - 1) % 20 == 0) {
+        if ((this.dontOverDoTheLogging1 - 1) % 200 == 0 && mon.isLearning()) {
         		System.out.println("Network stopped. Last RMSE="+mon.getGlobalError());
         }
 	}
