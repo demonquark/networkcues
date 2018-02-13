@@ -153,15 +153,18 @@ public class Agent {
 		}
 	}
 
-	public void completeTrade(Agent agent2, TradeEdge.TradeResult tradeResult) {
+	public void completeTrade(Agent agent2, TradeEdge.TradeResult tradeResult, TradeEdge.TradeResult tradeResultWithoutBoosts, double [] appliedBoosts) {
 		
+		// Prep the trade data for training
+		double [][] inputArray = this.getInputArray(agent2, appliedBoosts);
+		double [][] desiredOutputArray = new double[1][1];
+		
+		//---- actually updating the network --- 
 		// Record that the trade happened
-		TradeEdge.TradeResult previousTradeResult = this.lastTradeResult;
 		RepastEdge<Object> edge = this.commNetwork.getEdge(this, agent2);
 		if (edge != null && CommunicationEdge.class.isInstance(edge)) {
-			previousTradeResult = ((CommunicationEdge<Object>) edge).getLastTradeResult(this);
 			((CommunicationEdge<Object>) edge).addTrade();
-			((CommunicationEdge<Object>) edge).setLastTradeResult(this, tradeResult);;
+			((CommunicationEdge<Object>) edge).setLastTradeResult(this, tradeResult);
 		}
 
 		// Update the last trade result
@@ -186,45 +189,15 @@ public class Agent {
 			agent2.rate(singleRating);
 		}
 		
-		// Prep the trade data for training
-		double [][] inputArray = new double[1][20];
-		double [][] desiredOutputArray = new double[1][1];
-		
-		// profile features
-		inputArray[0][0] = this.profile.profileFeature1;
-		inputArray[0][1] = this.profile.profileFeature2;
-		inputArray[0][2] = this.profile.profileFeature3;
-		inputArray[0][3] = this.profile.profileFeature4;
-		inputArray[0][4] = this.profile.profileFeature5;
-		inputArray[0][5] = this.profile.profileFeature6;
-		inputArray[0][6] = this.profile.profileFeature7;
-		
-		// partner profile features
-		inputArray[0][7] = agent2.profile.profileFeature1;
-		inputArray[0][8] = agent2.profile.profileFeature2;
-		inputArray[0][9] = agent2.profile.profileFeature3;
-		inputArray[0][10] = agent2.profile.profileFeature4;
-		inputArray[0][11] = agent2.profile.profileFeature5;
-		inputArray[0][12] = agent2.profile.profileFeature6;
-		inputArray[0][13] = agent2.profile.profileFeature7;
-		
-		// signals sent during the trade
-		inputArray[0][14] = this.profile.getGroupID() == agent2.profile.getGroupID() ? 1 : 0;
-		inputArray[0][15] = previousTradeResult == TradeEdge.TradeResult.CC || previousTradeResult == TradeEdge.TradeResult.DC ? 1 : 0;
-
-		// Applied boosts
-		inputArray[0][16] = 0;
-		inputArray[0][17] = 0;
-		inputArray[0][18] = 0;
-		inputArray[0][19] = 0;
+		//---- end updating the network --- 
 		
 		// 1 is cooperated and 0 is defected
 		desiredOutputArray[0][0] = tradeResult == TradeEdge.TradeResult.CC || tradeResult == TradeEdge.TradeResult.CD ? 1 : 0;
 		
 		// Use the trade data to train the AgentController
 //		this.supervisor.train(inputArray, desiredOutputArray);
-//		this.supervisor.interrogate(inputArray, desiredOutputArray);
-		this.supervisor.act(inputArray, desiredOutputArray);
+		this.supervisor.interrogate(inputArray, desiredOutputArray);
+//		this.supervisor.act(inputArray, desiredOutputArray);
 		
 	}
 
@@ -324,4 +297,52 @@ public class Agent {
 		return Math.sqrt(sum);
 	}
 	
+	public double [] getBoosts(Agent agent2)  {
+		
+		double [][] inputArray = this.getInputArray(agent2, new double [4]);
+		return this.supervisor.getBoosts(inputArray);
+	}
+	
+	
+	private double [][] getInputArray(Agent agent2, double [] appliedBoosts) {
+		
+		// Record that the trade happened
+		TradeEdge.TradeResult previousTradeResult = this.lastTradeResult;
+		RepastEdge<Object> edge = this.commNetwork.getEdge(this, agent2);
+		if (edge != null && CommunicationEdge.class.isInstance(edge)) {
+			previousTradeResult = ((CommunicationEdge<Object>) edge).getLastTradeResult(this);
+		}
+		
+		double [][] inputArray = new double[1][20];
+		
+		// profile features
+		inputArray[0][0] = this.profile.profileFeature1;
+		inputArray[0][1] = this.profile.profileFeature2;
+		inputArray[0][2] = this.profile.profileFeature3;
+		inputArray[0][3] = this.profile.profileFeature4;
+		inputArray[0][4] = this.profile.profileFeature5;
+		inputArray[0][5] = this.profile.profileFeature6;
+		inputArray[0][6] = this.profile.profileFeature7;
+		
+		// partner profile features
+		inputArray[0][7] = agent2.profile.profileFeature1;
+		inputArray[0][8] = agent2.profile.profileFeature2;
+		inputArray[0][9] = agent2.profile.profileFeature3;
+		inputArray[0][10] = agent2.profile.profileFeature4;
+		inputArray[0][11] = agent2.profile.profileFeature5;
+		inputArray[0][12] = agent2.profile.profileFeature6;
+		inputArray[0][13] = agent2.profile.profileFeature7;
+		
+		// signals sent during the trade
+		inputArray[0][14] = this.profile.getGroupID() == agent2.profile.getGroupID() ? 1 : 0;
+		inputArray[0][15] = previousTradeResult == TradeEdge.TradeResult.CC || previousTradeResult == TradeEdge.TradeResult.DC ? 1 : 0;
+
+		// Applied boosts
+		inputArray[0][16] = appliedBoosts[0];
+		inputArray[0][17] = appliedBoosts[1];
+		inputArray[0][18] = appliedBoosts[2];
+		inputArray[0][19] = appliedBoosts[3];
+		
+		return inputArray;
+	}
 }

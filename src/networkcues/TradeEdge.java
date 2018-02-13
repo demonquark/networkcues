@@ -1,5 +1,7 @@
 package networkcues;
 
+import java.util.Arrays;
+
 import repast.simphony.random.RandomHelper;
 import repast.simphony.space.graph.RepastEdge;
 
@@ -15,18 +17,33 @@ public class TradeEdge<T> extends RepastEdge<T> {
 		this.target = target;
 		this.directed = directed;
 		this.weight = weight;
-		this.boosts = new double [4];
+		this.boosts = null;
 		
 		// Make the trade
-		if (Agent.class.isInstance(source) && Agent.class.isInstance(target)) { 
-			this.makeTrade(calculatePayOffMatrix((Agent)source, (Agent)target), calculatePayOffMatrix((Agent)target, (Agent)source));
-		} else {
-			this.makeTrade(new double [4], new double [4]);
-		}
+		this.makeTrade();
 		
 	}
 	
-	private double [] calculatePayOffMatrix(Agent agent1, Agent agent2) {
+	private double [] calculatePayOffMatrix(Agent agent1, Agent agent2, boolean applyboosts) {
+		
+		// Get the boosts
+		// If appliedBoosts is null, then this is source -> target, else it's target -> target
+		double [] appliedBoosts = new double [4];
+		if (applyboosts) {
+			appliedBoosts = agent1.getBoosts(agent2);
+			if (this.boosts == null) {
+				this.boosts = new double [8];
+				this.boosts[0] = appliedBoosts[0];
+				this.boosts[1] = appliedBoosts[1];
+				this.boosts[2] = appliedBoosts[2];
+				this.boosts[3] = appliedBoosts[3];
+			} else {
+				this.boosts[4] = appliedBoosts[0];
+				this.boosts[5] = appliedBoosts[1];
+				this.boosts[6] = appliedBoosts[2];
+				this.boosts[7] = appliedBoosts[3];			
+			}			
+		}
 		
 		// Calculate the default pay off matrices
 		double b_c = agent1.selling.benefit - agent1.selling.cost;
@@ -42,6 +59,10 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			// Calculate H
 			double h = k > 2 ? ((b_c) * k + 2 * c) / ((k + 1) * (k - 2)) : b_c;
 			
+			// apply the boost
+			normalizedDistance += 0.5 * appliedBoosts[0];
+			normalizedDistance = normalizedDistance > 1 ? 1 : normalizedDistance;
+			
 			// Update the cost and benefit
 			b += h * normalizedDistance;
 			c += h * normalizedDistance;
@@ -51,6 +72,10 @@ public class TradeEdge<T> extends RepastEdge<T> {
 		if(agent1.profile.useKinshipSelection()) {
 			// Get the kinship
 			double r = agent1.getKinshipCoefficientTo(agent2);
+			
+			// apply the boost
+			r += (r == 0 ? 0.2 : 0.5) * appliedBoosts[1];
+			r = r > 1 ? 1 : r;
 			
 			// Update the cost and benefit
 			b += r * c;
@@ -63,6 +88,10 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			// Get the kinship
 			double a = agent1.getGroupAffinityWith(agent2);
 			
+			// apply the boost
+			a += 0.5 * appliedBoosts[2];
+			a = a > 1 ? 1 : a;
+
 			// Update the cost and benefit
 			c += a * b_c;
 			b_c += a * b_c;
@@ -73,6 +102,10 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			// Get the reputation of the other agent
 			double q = agent1.getReputationOf(agent2);
 			
+			// apply the boost
+			q += 0.5 * appliedBoosts[3];
+			q = q > 1 ? 1 : q;
+
 			// Update the cost and benefit
 			b = b * (1 - q);
 			c = c * (1 - q);			
@@ -94,8 +127,8 @@ public class TradeEdge<T> extends RepastEdge<T> {
 		if(a != null && payoffMatrix != null && payoffMatrix.length == 4) {
 
 			// Determine the expected return for the agent
-			double a_c1 = (payoffMatrix[0] + payoffMatrix[1] + a.selling.cost) / 2;
-			double a_d1 = (payoffMatrix[2] + payoffMatrix[3] - a.selling.cost) / 2;
+			double a_c1 = (payoffMatrix[0] + payoffMatrix[1] + (0.9 * a.selling.cost)) / 2;
+			double a_d1 = (payoffMatrix[2] + payoffMatrix[3] - (0.9 * a.selling.cost)) / 2;
 
 			// Apply the strategy preference to the expected return
 			double a_c2 = a_c1;
@@ -119,7 +152,8 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			}
 			
 			// Determine whether or not to cooperate based on Greedy mentality (i.e. choose highest expected return)
-			boolean a_cooperate = (a_c2 > a_d2 ? true : a_c2 == a_d2 ? RandomHelper.nextDouble() > 0.55 : false);
+			boolean a_cooperate = (a_c2 > a_d2 ? true : a_c2 == a_d2 ? false : false);
+//			boolean a_cooperate = (a_c2 > a_d2 ? true : a_c2 == a_d2 ? RandomHelper.nextDouble() > 0.55 : false);
 
 			// Log output
 			String a_profile = (a.profile.useNetworkReciprocity() ? "1": "0");
@@ -142,7 +176,7 @@ public class TradeEdge<T> extends RepastEdge<T> {
 		return logOutput;
 	} 
 	
-	public void makeTrade(double [] sourcePayOffMatrix, double [] targetPayOffMatrix) {
+	public void makeTrade() {
 		// Calculate the pay off matrix
 		if (Agent.class.isInstance(this.source) && Agent.class.isInstance(this.target)) { 
 
@@ -150,24 +184,21 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			Agent b = (Agent)this.target;
 			
 			// Determine the node choices
-			String [] logOutput1 = this.chooseAction(a, sourcePayOffMatrix, a.getLastTradeResultWithAgent(b));
-			String [] logOutput2 = this.chooseAction(b, targetPayOffMatrix, b.getLastTradeResultWithAgent(a));
+			String [] logOutput1 = this.chooseAction(a, calculatePayOffMatrix(a, b, true), a.getLastTradeResultWithAgent(b));
+			String [] logOutput2 = this.chooseAction(b, calculatePayOffMatrix(b, a, true), b.getLastTradeResultWithAgent(a));
+			String [] logOutputWithoutBoost1 = this.chooseAction(a, calculatePayOffMatrix(a, b, false), a.getLastTradeResultWithAgent(b));
+			String [] logOutputWithoutBoost2 = this.chooseAction(b, calculatePayOffMatrix(b, a, false), b.getLastTradeResultWithAgent(a));
 						
+			// Determine the trade results
+			TradeEdge.TradeResult a_tradeResult = convertToTradeResult(logOutput1[1], logOutput2[1]);
+			TradeEdge.TradeResult b_tradeResult = convertToTradeResult(logOutput2[1], logOutput1[1]);
+			TradeEdge.TradeResult a_tradeResultWithoutBoost = convertToTradeResult(logOutputWithoutBoost1[1], logOutputWithoutBoost2[1]);
+			TradeEdge.TradeResult b_tradeResultWithoutBoost = convertToTradeResult(logOutputWithoutBoost2[1], logOutputWithoutBoost1[1]);
+			
 			// Complete the trade
-			TradeEdge.TradeResult a_tradeResult;
-			TradeEdge.TradeResult b_tradeResult;
-			if("C".equals(logOutput1[1])) {
-				a_tradeResult = "C".equals(logOutput2[1]) ? TradeEdge.TradeResult.CC : TradeEdge.TradeResult.CD;
-			} else {
-				a_tradeResult = "C".equals(logOutput2[1]) ? TradeEdge.TradeResult.DC : TradeEdge.TradeResult.DD;
-			}
-			if("C".equals(logOutput2[1])) {
-				b_tradeResult = "C".equals(logOutput1[1]) ? TradeEdge.TradeResult.CC : TradeEdge.TradeResult.CD;
-			} else {
-				b_tradeResult = "C".equals(logOutput1[1]) ? TradeEdge.TradeResult.DC : TradeEdge.TradeResult.DD;
-			}
-			a.completeTrade(b, a_tradeResult);
-			b.completeTrade(a, b_tradeResult);
+			// The first 4 elements of appliedBoosts are for source->target, the last 4 elements are for target->source
+			a.completeTrade(b, a_tradeResult, a_tradeResultWithoutBoost, Arrays.copyOfRange(this.boosts, 0, 4));
+			b.completeTrade(a, b_tradeResult, b_tradeResultWithoutBoost, Arrays.copyOfRange(this.boosts, 4, 8));
 			
 			// Log the node choice
 //			System.out.print(logOutput1[0] + " <-> " + logOutput2[0] + " " + logOutput1[1] + logOutput2[1] + " => " + logOutput1[2] + "<>" + logOutput2[2]);
@@ -176,6 +207,20 @@ public class TradeEdge<T> extends RepastEdge<T> {
 		} else {
 			System.out.println("One or more of the nodes is not an agent.");
 		}
+	}
+	
+	private TradeEdge.TradeResult convertToTradeResult(String a_action, String b_action){
+		
+		TradeEdge.TradeResult tradeResult;
+		
+		if("C".equals(a_action)) {
+			tradeResult = "C".equals(b_action) ? TradeEdge.TradeResult.CC : TradeEdge.TradeResult.CD;
+		} else {
+			tradeResult = "C".equals(b_action) ? TradeEdge.TradeResult.DC : TradeEdge.TradeResult.DD;
+		}
+		
+		return tradeResult;
+		
 	}
 	
 	public double getWeight() {

@@ -20,6 +20,7 @@ import repast.simphony.util.collections.IndexedIterable;
 
 public class NetworkCuesBuilder implements ContextBuilder<Object> {
 	
+	public static final String NNET_PATH = "/Users/krishnamoniz/Projecten/eclipse-workspace/networkcues/output/neuralnet.snet";
 	public static final int COUNT_AGENT = 200;
 	public static final int COUNT_GROUPS = 10;
 	public static final int LEN_SPACE = 50;
@@ -31,7 +32,7 @@ public class NetworkCuesBuilder implements ContextBuilder<Object> {
 		context.setId("networkcues");
 		
 		// Create a controller
-		AgentController agentController = new AgentController(null);
+		AgentController agentController = new AgentController(NetworkCuesBuilder.NNET_PATH);
 
 		// Create a network factory
 		NetworkFactory networkFactory = NetworkFactoryFinder.createNetworkFactory(null);
