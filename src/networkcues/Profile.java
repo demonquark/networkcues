@@ -6,6 +6,7 @@ public class Profile {
 
 	public static enum Strategy { COOPERATE, DEFECT, TITFORTAT, NONE }; 
 	public static final double TWO_THIRDS = 0.67; 
+	public static final double COOPERATION_PERCENTAGE = -1;
 
 	// Strategy and characteristics that influence payOffMatrix
 	private boolean kinship;
@@ -28,8 +29,6 @@ public class Profile {
 	protected double profileFeature6;
 	protected double profileFeature7;
 	
-	
-	
 	public Profile() {
 
 		// Create a profile
@@ -37,8 +36,10 @@ public class Profile {
 		this.network = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
 		this.indirect = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
 		this.group = RandomHelper.nextDouble() > Profile.TWO_THIRDS;
-		this.strategy = this.chooseARandomStrategy();
+		this.strategy = this.chooseARandomStrategy(COOPERATION_PERCENTAGE >= 0);
 
+//		this.customProfile();
+		
 		this.groupID = RandomHelper.nextIntFromTo(0, NetworkCuesBuilder.COUNT_GROUPS);
 		this.certainty = Profile.TWO_THIRDS;
 		this.talkability = RandomHelper.nextDouble();
@@ -53,9 +54,27 @@ public class Profile {
 		
 	}	
 	
-	private Strategy chooseARandomStrategy() {
+	private void customProfile() {
+		this.kinship = false;
+		this.network = false;
+		this.indirect = RandomHelper.nextDouble() < 0.9;
+		this.group = false;
+		
+	}
+	
+	private Strategy chooseARandomStrategy(boolean useCooperationPercentage) {
 		Strategy [] strategies = Strategy.values();
-		return strategies[RandomHelper.nextIntFromTo(0, strategies.length - 1)];
+		
+		Strategy chosenStrategy = null;
+		if (!useCooperationPercentage) {
+			chosenStrategy = strategies[RandomHelper.nextIntFromTo(0, strategies.length - 1)];
+		}else if (RandomHelper.nextDouble() < COOPERATION_PERCENTAGE) {
+			chosenStrategy = Strategy.COOPERATE;
+		} else {
+			chosenStrategy = strategies[RandomHelper.nextIntFromTo(1, strategies.length - 1)]; 
+		}
+		
+		return chosenStrategy;
 	}
 
 	public boolean useNetworkReciprocity() {

@@ -24,7 +24,10 @@ import repast.simphony.random.RandomHelper;
 
 public class AgentController implements NeuralNetListener {
 	
-	public static enum Mode { RANDOM_BOOSTS, NO_BOOSTS, IMPROVE_WITH_BOOSTS };
+	public static final int LOGGING_START = 20000;
+	public static final Mode LOGGING_MODE = Mode.FULL_BOOSTS;
+	public static enum Mode { FULL_BOOSTS, RANDOM_BOOSTS, NO_BOOSTS, IMPROVE_WITH_BOOSTS };
+	public static int logging_record = 0;
 
 	private String pathToNeuralNetFile;
 	private NeuralNet nnet;
@@ -37,7 +40,7 @@ public class AgentController implements NeuralNetListener {
 	private int dontOverDoTheLogging3;
 	private int boostRequests;
 	private double correctnessValue;
-	private double trustValue;
+	private  double trustValue;
 	private double boostCountValue;
 	private Mode supervisorMode;
 
@@ -52,7 +55,7 @@ public class AgentController implements NeuralNetListener {
 		this.correctnessValue = 0;
 		this.trustValue = 0;
 		this.boostCountValue = 0;
-		this.supervisorMode = Mode.IMPROVE_WITH_BOOSTS;
+		this.supervisorMode = LOGGING_MODE;
 		this.pathToNeuralNetFile = fileName != null ? fileName : NetworkCuesBuilder.NNET_PATH; 
 
 		// initialize the neural network
@@ -61,11 +64,13 @@ public class AgentController implements NeuralNetListener {
 
     public void act(double[][] inputArray, double[][] desiredOutputArray) {
     	
-	    	if (this.dontOverDoTheLogging1 < 30000) {
+    		logging_record = this.dontOverDoTheLogging2;
+    	
+	    	if (this.dontOverDoTheLogging1 < LOGGING_START) {
 	    		this.train(inputArray, desiredOutputArray);
-	    	} else if (this.dontOverDoTheLogging2 > 30000) {
+	    	} else if (this.dontOverDoTheLogging2 > LOGGING_START) {
 	    		this.interrogate(inputArray, desiredOutputArray);
-	    	} else if (this.dontOverDoTheLogging2 >= 29999){
+	    	} else if (this.dontOverDoTheLogging2 >= LOGGING_START - 1){
             // get the monitor object to train or feed forward
             Monitor monitor = nnet.getMonitor();
             
@@ -225,10 +230,14 @@ public class AgentController implements NeuralNetListener {
         		if (desiredOutputArray[0][0] > 0.5)
         			this.trustValue += 1;
 
-        		if (this.dontOverDoTheLogging3 % 100 == 0) {
-        			System.out.println((this.dontOverDoTheLogging3 / 100) + ". correctness_ratio: " + String.format("%.2f" , this.correctnessValue / this.dontOverDoTheLogging3)
-        							   + " cooperation_ratio: " + String.format("%.2f" , this.trustValue / this.dontOverDoTheLogging3)
-        							   + " boosted: " + String.format("%.2f" , this.boostCountValue / this.boostRequests));
+        		if (this.dontOverDoTheLogging3 % 10 == 0) {
+
+        			System.out.println(Profile.COOPERATION_PERCENTAGE + ";" + String.format("%.2f" , this.trustValue / this.dontOverDoTheLogging3));
+
+        			
+//        			System.out.println((this.dontOverDoTheLogging3 / 100) + ". correctness_ratio: " + String.format("%.2f" , this.correctnessValue / this.dontOverDoTheLogging3)
+//        							   + " cooperation_ratio: " + String.format("%.2f" , this.trustValue / this.dontOverDoTheLogging3)
+//        							   + " boosted: " + String.format("%.2f" , this.boostCountValue / this.boostRequests));
 //        			System.out.println( (this.dontOverDoTheLogging3 / 100) + ". " + String.format("%.2f" , desiredOutputArray[0][0]) + "|" + String.format("%.2f", pattern.getArray()[0]) 
 //        								+ " " + tradeResultWithoutBoosts + " => " + tradeResult 
 //        								+ " [" + (inputArray[0][16] > 0.2 ? "1" : "0") + (inputArray[0][17] > 0.2 ? "1" : "0") 
@@ -247,6 +256,12 @@ public class AgentController implements NeuralNetListener {
 
     		double[] boosts = new double [4];
     		switch(this.supervisorMode) {
+    		case FULL_BOOSTS:
+	    		boosts[0] = 0.9;
+	    		boosts[1] = 0.9;
+	    		boosts[2] = 0.9;
+	    		boosts[3] = 0.9;
+	    		break;
     		case RANDOM_BOOSTS:
 	    		boosts[0] = RandomHelper.nextDouble() > 0.2 ? 0 : RandomHelper.nextDoubleFromTo(0.75, 1);
 	    		boosts[1] = RandomHelper.nextDouble() > 0.2 ? 0 : RandomHelper.nextDoubleFromTo(0.75, 1);
@@ -309,7 +324,7 @@ public class AgentController implements NeuralNetListener {
 			this.groups.put(groupID, this.groups.get(groupID) + 1);
 		} else {
 			this.groups.put(groupID, 1);
-			this.groupAffinities.put(groupID, RandomHelper.nextDouble());
+			this.groupAffinities.put(groupID, RandomHelper.nextDoubleFromTo(0.3, 0.6));
 		}
 		
 	}

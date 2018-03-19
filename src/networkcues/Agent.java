@@ -196,8 +196,8 @@ public class Agent {
 		
 		// Use the trade data to train the AgentController
 //		this.supervisor.train(inputArray, desiredOutputArray);
-		this.supervisor.interrogate(inputArray, desiredOutputArray);
-//		this.supervisor.act(inputArray, desiredOutputArray);
+//		this.supervisor.interrogate(inputArray, desiredOutputArray);
+		this.supervisor.act(inputArray, desiredOutputArray);
 		
 	}
 

@@ -27,7 +27,7 @@ public class TradeEdge<T> extends RepastEdge<T> {
 	private double [] calculatePayOffMatrix(Agent agent1, Agent agent2, boolean applyboosts) {
 		
 		// Get the boosts
-		// If appliedBoosts is null, then this is source -> target, else it's target -> target
+		// If appliedBoosts is null, then this is source -> target, else it's target -> source
 		double [] appliedBoosts = new double [4];
 		if (applyboosts) {
 			appliedBoosts = agent1.getBoosts(agent2);
@@ -59,13 +59,17 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			// Calculate H
 			double h = k > 2 ? ((b_c) * k + 2 * c) / ((k + 1) * (k - 2)) : b_c;
 			
+			if(h > 5) {
+				h = 5;
+			}
+
 			// apply the boost
-			normalizedDistance += 0.5 * appliedBoosts[0];
+			normalizedDistance += 0.75 * appliedBoosts[0];
 			normalizedDistance = normalizedDistance > 1 ? 1 : normalizedDistance;
 			
 			// Update the cost and benefit
-			b += h * normalizedDistance;
-			c += h * normalizedDistance;
+			b -= h * normalizedDistance * (applyboosts ? 2 : 1);
+			c += h * normalizedDistance * (applyboosts ? 2 : 1);
 		}
 		
 		// Kinship selection
@@ -89,8 +93,10 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			double a = agent1.getGroupAffinityWith(agent2);
 			
 			// apply the boost
-			a += 0.5 * appliedBoosts[2];
+//			System.out.print("a: " + String.format("%.2f", a) +  ">" +  String.format("%.2f", a + (0.75 * appliedBoosts[2])) );
+			a += 0.75 * appliedBoosts[2];
 			a = a > 1 ? 1 : a;
+//			System.out.println(">" + String.format("%.2f", a) + " ~ " + String.format("%.2f", (a *b_c)));
 
 			// Update the cost and benefit
 			c += a * b_c;
@@ -103,8 +109,10 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			double q = agent1.getReputationOf(agent2);
 			
 			// apply the boost
-			q += 0.5 * appliedBoosts[3];
+//			System.out.print("q: " + String.format("%.2f", q) +  ">" +  String.format("%.2f", q + (0.75 * appliedBoosts[2])) );
+			q += 0.75 * appliedBoosts[3];
 			q = q > 1 ? 1 : q;
+//			System.out.println(">" + String.format("%.2f", q) + " ~ " + String.format("%.2f", (1-q)));
 
 			// Update the cost and benefit
 			b = b * (1 - q);
@@ -127,8 +135,8 @@ public class TradeEdge<T> extends RepastEdge<T> {
 		if(a != null && payoffMatrix != null && payoffMatrix.length == 4) {
 
 			// Determine the expected return for the agent
-			double a_c1 = (payoffMatrix[0] + payoffMatrix[1] + (0.9 * a.selling.cost)) / 2;
-			double a_d1 = (payoffMatrix[2] + payoffMatrix[3] - (0.9 * a.selling.cost)) / 2;
+			double a_c1 = (payoffMatrix[0] + payoffMatrix[1] + (0.85 * a.selling.cost)) / 2;
+			double a_d1 = (payoffMatrix[2] + payoffMatrix[3] - (0.85 * a.selling.cost)) / 2;
 
 			// Apply the strategy preference to the expected return
 			double a_c2 = a_c1;
@@ -152,7 +160,7 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			}
 			
 			// Determine whether or not to cooperate based on Greedy mentality (i.e. choose highest expected return)
-			boolean a_cooperate = (a_c2 > a_d2 ? true : a_c2 == a_d2 ? false : false);
+			boolean a_cooperate = (a_c2 > a_d2 ? true : a_c2 == a_d2 ? true : false);
 //			boolean a_cooperate = (a_c2 > a_d2 ? true : a_c2 == a_d2 ? RandomHelper.nextDouble() > 0.55 : false);
 
 			// Log output
@@ -201,8 +209,14 @@ public class TradeEdge<T> extends RepastEdge<T> {
 			b.completeTrade(a, b_tradeResult, b_tradeResultWithoutBoost, Arrays.copyOfRange(this.boosts, 4, 8));
 			
 			// Log the node choice
-//			System.out.print(logOutput1[0] + " <-> " + logOutput2[0] + " " + logOutput1[1] + logOutput2[1] + " => " + logOutput1[2] + "<>" + logOutput2[2]);
-//			System.out.println(" ~ " + logOutput1[3] + "<>" + logOutput2[3] + " ~ " + logOutput1[4] + "<>" + logOutput2[4]);
+//			if(AgentController.logging_record > AgentController.LOGGING_START) {
+//				String boostString = "|";
+//				for (int i=0; i < this.boosts.length; i++) { boostString += String.format("%.2f", boosts[i]) + "|" ; }
+//				System.out.print(logOutput1[0] + " <-> " + logOutput2[0] + " " + logOutput1[1] + logOutput2[1] + " => " + logOutputWithoutBoost1[2] + "<>" + logOutputWithoutBoost2[2]);
+//				System.out.print( " ~ " + logOutput1[2] + "<>" + logOutput2[2]);
+//				System.out.println(" ~ " + logOutput1[3] + "<>" + logOutput2[3] + " ~ " + logOutput1[4] + "<>" + logOutput2[4] + " ~ " + boostString);
+//				
+//			}
 			
 		} else {
 			System.out.println("One or more of the nodes is not an agent.");
